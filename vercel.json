@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "finmgr_ms",
+  "builds": [
+    { "src": "app.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/app.js" }
+  ]
+}
