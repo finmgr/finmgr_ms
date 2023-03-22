@@ -49,6 +49,8 @@ const uri = "mongodb+srv://ukencaph:ukencaph@enbits.4gilqgs.mongodb.net/?retryWr
 
 var expense = {
     all: async function(req,res){ 
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
         console.log("inside get method");
         const client = new MongoClient(uri);
         try {
@@ -59,9 +61,11 @@ var expense = {
                 projection: { _id: 0, name: 1, amount: 1, date: 1 },
               };
             await client.connect();
-            databasesList = await client.db("finmgr").collection("entries").find({}, options).toArray();
+            console.log(session_id+"_entries")
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").find({}, options).toArray();
+            console.log(databasesList)
            // databasesList.databases.forEach(db => data.push(db));
-         
+             
         } catch (e) {
             console.error(e);
         }
@@ -70,30 +74,118 @@ var expense = {
         }
     
         res.json(databasesList); 
+    }else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
     },
     category: async function(req,res){ 
         console.log("inside get method");
-        const client = new MongoClient(uri);
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
+            const client = new MongoClient(uri);
         try {
             await client.connect();
-            databasesList = await client.db("finmgr").collection("category").find().toArray();
+            databasesList = await client.db("finmgr").collection(session_id+"_category").find().toArray();
            // databasesList.databases.forEach(db => data.push(db));
          
-        } catch (e) {
-            console.error(e);
+        } catch (err) {
+            res.status(500).send({
+                message: 'Error Occured '+err
+             }); 
         }
         finally {
             await client.close();
         }
     
         res.json(databasesList); 
+        }
+        else{
+            res.status(403).send({
+                message: 'Invalid User'
+             }); 
+        }
+        
+    },
+    logUserIn : async function(req,res){
+        console.log("Starting user Log-in process");
+        const client = new MongoClient(uri);
+        try{
+            await client.connect();
+            const houseid = req.body.houseid;
+            const password = req.body.password;
+            const query = { houseid : houseid };
+            const options = {
+              
+              // Include only the `title` and `imdb` fields in the returned document
+              projection: { _id: 0, houseid: 1, password: 1},
+            };
+            gettingUser = await client.db("finmgr").collection("users").findOne(query,options)
+            if(gettingUser){
+                gettingUser['session_id'] =  btoa(gettingUser.houseid+":"+gettingUser.password);
+            }
+        }
+        catch(err){
+            res.status(500).send({
+                message: 'Error Occured '+err
+             }); 
+        }
+        finally{
+            await client.close();
+        }
+        res.json(gettingUser);
+    },
+    registerUser : async function(req,res){
+        console.log("Starting user creation process");
+        const client = new MongoClient(uri);
+        try{
+            await client.connect();
+            const houseid = req.body.houseid;
+            const password = req.body.password;
+            const query = { houseid : houseid };
+            const options = {
+              // sort matched documents in descending order by rating
+              sort: { date: 1 },
+              // Include only the `title` and `imdb` fields in the returned document
+              projection: { _id: 0, name: 1, amount: 1, date: 1 },
+            };
+            gettingUser = await client.db("finmgr").collection("users").findOne(query,options)
+            if(gettingUser){
+                console.log("Another user found with same house id")
+                        res.status(400).send({
+                            message: 'Duplicate HouseId please use another id'
+                         }); 
+            }
+            else{
+                console.log("verified the entered house id is not registered... moving forward")
+                createUser = await client.db("finmgr").collection("users").insertOne(req.body);
+                if(createUser){
+                    console.log("creating collections");
+                    const encryptedUser = btoa(houseid+":"+password)
+                    createdEntityTable = await client.db("finmgr").createCollection(encryptedUser+"_entity");
+                    createdCategoryTable = await client.db("finmgr").createCollection(encryptedUser+"_category");
+                }
+            }
+        }
+        catch(err){
+            res.status(500).send({
+                message: 'Error Occured '+err
+             }); 
+        }
+        finally{
+            await client.close();
+        }
+        res.json(createUser); 
     },
     add: async function(req, res){
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
         console.log("inside POST method of adding expense")
         const client = new MongoClient(uri)
         try{
             await client.connect();
-            databasesList = await client.db("finmgr").collection("entries").insertOne(req.body);
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").insertOne(req.body);
             webpush.sendNotification(subscription, JSON.stringify(payload), options)
             .then((_) => {
                 console.log('SENT!!!');
@@ -112,6 +204,12 @@ var expense = {
             await client.close();
         }
         res.json(databasesList);
+    }
+    else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
     },
     delete: async function(req, res){
         console.log("inside delete method of expense")
@@ -141,6 +239,8 @@ var expense = {
         res.json(databasesList);
     },
     report: async function(req, res){
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
         console.log("inside report method of expense")
         const client = new MongoClient(uri)
         try{
@@ -154,7 +254,7 @@ var expense = {
             };
         
             console.log("report item with id"+req.params.id)
-            databasesList = await client.db("finmgr").collection("entries").find(query, options).toArray();
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").find(query, options).toArray();
             
             
 
@@ -167,6 +267,12 @@ var expense = {
             await client.close();
         }
         res.json(databasesList);
+    }
+    else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
     }
 
 }
