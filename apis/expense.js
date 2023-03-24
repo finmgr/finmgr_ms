@@ -53,6 +53,16 @@ var expense = {
         if(session_id){
         console.log("inside get method");
         const client = new MongoClient(uri);
+        const startDate = new Date();
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+
+        const endDate = new Date();
+        endDate.setMonth(startDate.getMonth() + 1);
+        endDate.setDate(0);
+        endDate.setHours(23, 59, 59, 999);
+        console.log(startDate.toISOString());
+        console.log(endDate.toISOString());
         try {
             const options = {
                 // sort matched documents in descending order by rating
@@ -62,7 +72,10 @@ var expense = {
               };
             await client.connect();
             console.log(session_id+"_entries")
-            databasesList = await client.db("finmgr").collection(session_id+"_entries").find({}, options).toArray();
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").find({date: {
+                $gte: '2023-03-20T18:30:00.000Z',
+                $lt: '2023-03-22T13:53:13.425Z'
+              }}, options).toArray();
             console.log(databasesList)
            // databasesList.databases.forEach(db => data.push(db));
              
@@ -82,6 +95,16 @@ var expense = {
     },
     category: async function(req,res){ 
         console.log("inside get method");
+        const startDate = new Date();
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+
+        const endDate = new Date();
+        endDate.setMonth(startDate.getMonth() + 1);
+        endDate.setDate(0);
+        endDate.setHours(23, 59, 59, 999);
+        console.log(startDate.toISOString());
+        console.log(endDate.toISOString());
         const session_id = req.headers.authorization.split(' ')[1];
         if(session_id){
             const client = new MongoClient(uri);
