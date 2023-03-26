@@ -53,15 +53,13 @@ var expense = {
         if(session_id){
         console.log("inside get method");
         const client = new MongoClient(uri);
-        const startDate = new Date();
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
+        const startDate = new Date(new Date(new Date().setHours(0,0,0,0)).setDate(2));
 
         const endDate = new Date();
         endDate.setMonth(startDate.getMonth() + 1);
         endDate.setDate(0);
         endDate.setHours(23, 59, 59, 999);
-        console.log(startDate.toISOString());
+        console.log(startDate);
         console.log(endDate.toISOString());
         try {
             const options = {
@@ -73,8 +71,8 @@ var expense = {
             await client.connect();
             console.log(session_id+"_entries")
             databasesList = await client.db("finmgr").collection(session_id+"_entries").find({date: {
-                $gte: '2023-03-20T18:30:00.000Z',
-                $lt: '2023-03-22T13:53:13.425Z'
+                $gte: startDate.toISOString(),
+                $lt: endDate.toISOString()
               }}, options).toArray();
             console.log(databasesList)
            // databasesList.databases.forEach(db => data.push(db));
@@ -205,10 +203,12 @@ var expense = {
         const session_id = req.headers.authorization.split(' ')[1];
         if(session_id){
         console.log("inside POST method of adding expense")
+        var reqPayload = req.body;
+        reqPayload['name'] = reqPayload['name'].trim();
         const client = new MongoClient(uri)
         try{
             await client.connect();
-            databasesList = await client.db("finmgr").collection(session_id+"_entries").insertOne(req.body);
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").insertOne(reqPayload);
             webpush.sendNotification(subscription, JSON.stringify(payload), options)
             .then((_) => {
                 console.log('SENT!!!');
@@ -268,7 +268,8 @@ var expense = {
         const client = new MongoClient(uri)
         try{
             await client.connect();
-            const query = { name: req.params.id };
+            var searchId = req.params.id.trim();
+            const query = { name: {$regex: new RegExp(searchId, "i") } };
             const options = {
               // sort matched documents in descending order by rating
               sort: { date: 1 },
