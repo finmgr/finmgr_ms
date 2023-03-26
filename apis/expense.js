@@ -1,4 +1,4 @@
-const {MongoClient} = require('mongodb');
+const {MongoClient, ObjectId} = require('mongodb');
 const webpush = require('web-push');
 var vapidKeys = {
     publicKey: 'BMafcqtSh7wn6SkFZ1MGZMzJKXTF080afqHfQpTZBKSQyMdRrVWQ3xO_ri-NrOb-aS5cM-go4FHS2MeA6cXDcBg',
@@ -66,7 +66,7 @@ var expense = {
                 // sort matched documents in descending order by rating
                 sort: { date: 1 },
                 // Include only the `title` and `imdb` fields in the returned document
-                projection: { _id: 0, name: 1, amount: 1, date: 1 },
+                projection: { _id: 1, name: 1, amount: 1, date: 1 },
               };
             await client.connect();
             console.log(session_id+"_entries")
@@ -236,22 +236,28 @@ var expense = {
     },
     delete: async function(req, res){
         console.log("inside delete method of expense")
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
         const client = new MongoClient(uri)
         try{
             await client.connect();
-            console.log("delete item with id"+req.params.id)
-            databasesList = await client.db("finmgr").collection("entries").findOne({'_id':req.params.id});
             
-            webpush.sendNotification(subscription, JSON.stringify(payload), options)
-            .then((_) => {
-                console.log('SENT!!!');
-                console.log(_);
-            })
-            .catch((_) => {
-                console.log(_);
-            });
-
+            console.log("delete item with id"+req.params.id)
+            var id = new ObjectId(req.params.id);
+            const query = { _id: id };
+            const options = {
+              // sort matched documents in descending order by rating
+              sort: { date: 1 },
+              // Include only the `title` and `imdb` fields in the returned document
+              projection: { _id: 1, name: 1, amount: 1, date: 1 },
+            };
+        
+            console.log("report item with id"+req.params.id)
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").findOneAndDelete(query, options);
         }
+        
+
+        
         catch(e){
             console.error(e);
 
@@ -260,6 +266,12 @@ var expense = {
             await client.close();
         }
         res.json(databasesList);
+         }
+    else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
     },
     report: async function(req, res){
         const session_id = req.headers.authorization.split(' ')[1];
@@ -274,7 +286,7 @@ var expense = {
               // sort matched documents in descending order by rating
               sort: { date: 1 },
               // Include only the `title` and `imdb` fields in the returned document
-              projection: { _id: 0, name: 1, amount: 1, date: 1 },
+              projection: { _id: 1, name: 1, amount: 1, date: 1 },
             };
         
             console.log("report item with id"+req.params.id)
