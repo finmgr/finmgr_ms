@@ -56,7 +56,7 @@ var expense = {
         const startDate = new Date(new Date(new Date().setHours(0,0,0,0)).setDate(2));
 
         const endDate = new Date();
-        endDate.setMonth(startDate.getMonth() + 1);
+        endDate.setMonth(startDate.getMonth() );
         endDate.setDate(0);
         endDate.setHours(23, 59, 59, 999);
         console.log(startDate);
