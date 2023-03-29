@@ -53,10 +53,10 @@ var expense = {
         if(session_id){
         console.log("inside get method");
         const client = new MongoClient(uri);
-        const startDate = new Date(new Date(new Date().setHours(0,0,0,0)).setDate(2));
+        const startDate = new Date(new Date(new Date().setHours(0,0,0,0)).setDate(1));
 
         const endDate = new Date();
-        endDate.setMonth(startDate.getMonth() );
+        endDate.setMonth(startDate.getMonth() +1);
         endDate.setDate(0);
         endDate.setHours(23, 59, 59, 999);
         console.log(startDate);
