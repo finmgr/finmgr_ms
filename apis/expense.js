@@ -273,6 +273,50 @@ var expense = {
          }); 
     }
     },
+    update: async function(req, res){
+        console.log("inside update method of expense")
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
+        const client = new MongoClient(uri)
+        try{
+            await client.connect();
+            
+            console.log("update item with id"+req.params.id)
+            console.log("update item "+JSON.stringify(req.body))
+            var id = new ObjectId(req.params.id);
+            const query = { _id: id };
+            const options = {
+              // sort matched documents in descending order by rating
+              sort: { date: 1 },
+              // Include only the `title` and `imdb` fields in the returned document
+              projection: { _id: 1, name: 1, amount: 1, date: 1 },
+            };
+            const newValue = { $set: {name: req.body.name, amount : req.body.amount, date: req.body.date}};
+            console.log("report item with id"+req.params.id)
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").findOneAndUpdate(query,newValue, options);
+            res.json(databasesList);
+        }
+        
+
+        
+        catch(e){
+            console.error(e);
+            res.status(500).send({
+                message: e
+             }); 
+
+        }
+        finally {   
+            await client.close();
+        }
+        
+         }
+    else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
+    },
     report: async function(req, res){
         const session_id = req.headers.authorization.split(' ')[1];
         if(session_id){
