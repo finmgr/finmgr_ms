@@ -15,6 +15,7 @@ module.exports = function(app) {
     app.route("/report/:id").get(expense.report)
     app.route("/register").post(expense.registerUser)
     app.route("/login").post(expense.logUserIn)
+    app.route("/expense/:sdate/:edate").get(expense.periodTransaction)
     //app.route('/expense/:id').get(expense.getById)
     
 

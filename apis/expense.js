@@ -48,6 +48,43 @@ const options = {
 const uri = "mongodb+srv://ukencaph:ukencaph@enbits.4gilqgs.mongodb.net/?retryWrites=true&w=majority";
 
 var expense = {
+    periodTransaction: async function(req, res){
+        const session_id = req.headers.authorization.split(' ')[1];
+        if(session_id){
+        console.log("inside get method");
+        const client = new MongoClient(uri);
+        const startDate = req.params.sdate;
+        const endDate = req.params.edate;
+        try {
+            const options = {
+                // sort matched documents in descending order by rating
+                sort: { date: 1 },
+                // Include only the `title` and `imdb` fields in the returned document
+                projection: { _id: 1, name: 1, amount: 1, date: 1 },
+              };
+            await client.connect();
+            console.log(session_id+"_entries")
+            databasesList = await client.db("finmgr").collection(session_id+"_entries").find({date: {
+                $gte: startDate,
+                $lt: endDate
+              }}, options).toArray();
+            console.log(databasesList)
+           // databasesList.databases.forEach(db => data.push(db));
+             
+        } catch (e) {
+            console.error(e);
+        }
+        finally {
+            await client.close();
+        }
+    
+        res.json(databasesList); 
+    }else{
+        res.status(403).send({
+            message: 'Invalid User'
+         }); 
+    }
+    },
     all: async function(req,res){ 
         const session_id = req.headers.authorization.split(' ')[1];
         if(session_id){
