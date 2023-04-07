@@ -16,7 +16,8 @@ module.exports = function(app) {
     app.route("/register").post(expense.registerUser)
     app.route("/login").post(expense.logUserIn)
     app.route("/expense/:sdate/:edate").get(expense.periodTransaction)
-    //app.route('/expense/:id').get(expense.getById)
+    app.route('/send').get(expense.send)
+    app.route('/token/:id/:token').get(expense.addToken)
     
 
 };

@@ -1,51 +1,19 @@
 const {MongoClient, ObjectId} = require('mongodb');
-const webpush = require('web-push');
-var vapidKeys = {
-    publicKey: 'BMafcqtSh7wn6SkFZ1MGZMzJKXTF080afqHfQpTZBKSQyMdRrVWQ3xO_ri-NrOb-aS5cM-go4FHS2MeA6cXDcBg',
-    privateKey: 'NdNfHRPl5s5PhT64iQmHVGfVj2g3MmmMMrjO4GGjN4Q'
-  }
-  const subscription = {
-    "endpoint": "https://fcm.googleapis.com/fcm/send/cUmFIvyTFbc:APA91bHigxd1Yq4TMXpDXOQRP_Ie03kRFvDIKBwqtwD1FUhVncjneL5PlA8YGY2dEYTPrtLAc1CvTPQc6ZO_Y80ULREB7GFnY669cEAxvY46f2YqZll60_xVwzREtl_pIyUWGINxTCQo",
-    "expirationTime": null,
-    "keys": {
-      "p256dh": "BGnNhdb6rq4CblZZwqSE0KEpz-40qR7lTc2_cUy44Vy9u8TEgmhd6uW0o5t7cnXlAyyE8_GN2C5On-by3ow2KUc",
-      "auth": "r4V0fGjldAI1w8Lr4o0gfw"
-    }
-  }
-const payload = {
-    notification: {
-        title: 'Item Update',
-        body: 'New Activity on Item',
-        icon: 'assets/icons/icon-384x384.png',
-        actions: [
-            { action: 'bar', title: 'Focus last' },
-            { action: 'baz', title: 'Navigate last' },
-        ],
-        data: {
-            onActionClick: {
-                default: { operation: 'openWindow' },
-                bar: {
-                    operation: 'focusLastFocusedOrOpen',
-                    url: '/',
-                },
-                baz: {
-                    operation: 'navigateLastFocusedOrOpen',
-                    url: '/',
-                },
-            },
-        },
-    },
-};
-const options = {
-    vapidDetails: {
-        subject: 'mailto:startcode.uk@gmail.com',
-        publicKey: vapidKeys.publicKey,
-        privateKey: vapidKeys.privateKey,
-    },
-    TTL: 60,
-};
+const admin = require('firebase-admin');
+const request = require('request')
+const {House} = require('./house');
+const { async } = require('@firebase/util');
+var serviceAccount = require("./key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
 
 const uri = "mongodb+srv://ukencaph:ukencaph@enbits.4gilqgs.mongodb.net/?retryWrites=true&w=majority";
+
+
+  
 
 var expense = {
     periodTransaction: async function(req, res){
@@ -223,6 +191,7 @@ var expense = {
                     const encryptedUser = btoa(houseid+":"+password)
                     createdEntityTable = await client.db("finmgr").createCollection(encryptedUser+"_entity");
                     createdCategoryTable = await client.db("finmgr").createCollection(encryptedUser+"_category");
+                    createdCategoryTable = await client.db("finmgr").createCollection(encryptedUser+"_finaccount");
                 }
             }
         }
@@ -246,14 +215,10 @@ var expense = {
         try{
             await client.connect();
             databasesList = await client.db("finmgr").collection(session_id+"_entries").insertOne(reqPayload);
-            webpush.sendNotification(subscription, JSON.stringify(payload), options)
-            .then((_) => {
-                console.log('SENT!!!');
-                console.log(_);
-            })
-            .catch((_) => {
-                console.log(_);
-            });
+            if(databasesList){
+
+              //  this.sendNotificationToDevice(type, this.getHouseIdFromSessionId(session_id), message);
+            }
 
         }
         catch(e){
@@ -390,6 +355,78 @@ var expense = {
             message: 'Invalid User'
          }); 
     }
+    },
+    addToken: async function(req, res){
+        console.log("Starting user token registration process");
+        const client = new MongoClient(uri);
+        try{
+            await client.connect();
+            const houseid =req.params.id;
+            const query = { houseid : houseid };
+            const options = {
+              
+              // Include only the `title` and `imdb` fields in the returned document
+              projection: { _id: 0, houseid: 1, password: 1},
+            };
+            gettingUser = await client.db("finmgr").collection("users").findOne(query,options)
+            if(gettingUser){
+                console.log("update user with token"+req.params.id)
+                console.log("update item "+JSON.stringify(req.body))
+                var id = req.params.id;
+                const query = { houseid : id };
+                const options = {
+                  // sort matched documents in descending order by rating
+                  sort: { date: 1 },
+                  // Include only the `title` and `imdb` fields in the returned document
+                  projection: { _id: 1, name: 1, amount: 1, date: 1 },
+                };
+                var devicetoken  = gettingUser['token'] ? gettingUser['token'] : [];
+                devicetoken.push(req.params.token)
+                const newValue = { $set: {token: devicetoken}};
+                res.send(devicetoken)
+                databasesList = await client.db("finmgr").collection(session_id+"_entries").findOneAndUpdate(query,newValue, options);
+               
+            }
+        }
+        catch(err){
+            res.status(500).send({
+                message: 'Error Occured '+err
+             }); 
+        }
+        finally{
+            await client.close();
+        }
+       // res.json(databasesList);
+    },
+    send: async function(req, res){
+        const options = {
+            url: 'https://fcm.googleapis.com/fcm/send',
+            method: 'POST',
+            headers: {
+              'Authorization': 'key=AAAA0n5sQcU:APA91bEgw_YEmK_n4yVuKHzfVi2YuELQ9yzYZF4eSgYeXWnHbSVrl63oNp80KV3XD_4FAEAz1sdymtrE2ZaLYVvHC-25VUd5FKiQypphWsr2X7-BCThg9Bp_n9bNlcKMob8zl-ageS8b',
+              'Content-Type': 'application/json'
+            },
+            json: {
+              topic: 'global',
+              notification: {
+                title: 'Bahikhata',
+                body: 'This test Message'
+              }
+            }
+          };
+          
+          request(options, function(error, response, body) {
+            if (error) {
+              console.error('Error sending notification:', error);
+              res.send('Error sending notification:', error);
+            } else if (response.statusCode >= 400) {
+              console.error('HTTP Error:', response.statusCode, body);
+              res.send('HTTP Error:', response.statusCode, body);
+            } else {
+              console.log('Notification sent successfully:', body);
+              res.send('Notification sent successfully:', body);
+            }
+          });
     }
 
 }
