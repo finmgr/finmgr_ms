@@ -227,7 +227,7 @@ var expense = {
                 databasesList = await client.db("finmgr").collection(session_id + "_entries").insertOne(reqPayload);
                 
 
-                    initNotification(TYPE.ADD,reqPayload['name'],reqPayload['amount'],req.headers)
+                    initNotification(TYPE.ADD,reqPayload['name'],reqPayload['amount'],session_id)
                 
 
             }
@@ -267,8 +267,8 @@ var expense = {
                 console.log("report item with id" + req.params.id)
                 databasesList = await client.db("finmgr").collection(session_id + "_entries").findOneAndDelete(query, options);
                
-
-                    initNotification(TYPE.DELETE,"Expense","$$",req.headers)
+                console.info(JSON.stringify(databasesList));
+                    initNotification(TYPE.DELETE,"Expense","$$",session_id)
                 
             }
 
@@ -310,10 +310,10 @@ var expense = {
                 const newValue = { $set: { name: req.body.name, amount: req.body.amount, date: req.body.date } };
                 console.log("report item with id" + req.params.id)
                 databasesList = await client.db("finmgr").collection(session_id + "_entries").findOneAndUpdate(query, newValue, options);
-                if (databasesList) {
-
-                    initNotification(TYPE.UPDATE,req.body.name,req.body.amount,req.headers)
-                }
+                
+                console.info(JSON.stringify(databasesList));
+                    initNotification(TYPE.UPDATE,req.body.name,req.body.amount,session_id)
+                
                 res.json(databasesList);
             }
 
@@ -425,14 +425,41 @@ var expense = {
   
 
 }
-function initNotification(type, item, amount, header){
+function initNotification(type, item, amount, session_id){
     console.log("init Notification");
     const paylod = formMessage(type, item, amount);
     if(paylod){
-        sendNotificationToDevice(paylod.title, paylod.message, header);
+        getDeviceTokens(session_id, paylod.title, paylod.message);
     }
     else{
         console.error("Notification Failed");
+    }
+}
+async function getDeviceTokens(session_id, title, message ){
+    var houseid = atob(session_id).split(":")[0];
+    console.info(houseid)
+    const client = new MongoClient(uri);
+    try {
+        await client.connect();
+        const query = { houseid: houseid };
+        const options = {
+
+            // Include only the `title` and `imdb` fields in the returned document
+            projection: { _id: 0, houseid: 1, password: 1, token: 1 },
+        };
+        gettingUser = await client.db("finmgr").collection("users").findOne(query, options)
+        console.info("--------->"+JSON.stringify(gettingUser))
+        if (gettingUser) {
+            sendNotificationToDevice(title,message,gettingUser['token']);
+        }
+    }
+    catch (err) {
+        res.status(500).send({
+            message: 'Error Occured ' + err
+        });
+    }
+    finally {
+         client.close();
     }
 }
 function formMessage(type, item, amount) {
@@ -474,7 +501,7 @@ function sendNotificationToDevice(title, message, headers) {
             'Content-Type': 'application/json'
         },
         json: {
-            registration_ids: extractDeviceTokens(headers),
+            registration_ids: headers,
             notification: {
                 title: title,
                 body: message
