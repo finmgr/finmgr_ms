@@ -225,10 +225,10 @@ var expense = {
             try {
                 await client.connect();
                 databasesList = await client.db("finmgr").collection(session_id + "_entries").insertOne(reqPayload);
-                if (databasesList) {
+                
 
                     initNotification(TYPE.ADD,reqPayload['name'],reqPayload['amount'],req.headers)
-                }
+                
 
             }
             catch (e) {
@@ -266,10 +266,10 @@ var expense = {
 
                 console.log("report item with id" + req.params.id)
                 databasesList = await client.db("finmgr").collection(session_id + "_entries").findOneAndDelete(query, options);
-                if (databasesList) {
+               
 
                     initNotification(TYPE.DELETE,"Expense","$$",req.headers)
-                }
+                
             }
 
 
