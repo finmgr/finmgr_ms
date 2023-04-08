@@ -492,7 +492,7 @@ function sendNotificationToDevice(title, message, headers) {
 }
 function extractDeviceTokens(headers) {
     var currentUserToken = headers.d;
-    var houseTokens = Array.from(JSON.parse(headers.dl));
+    var houseTokens = headers.dl.split(",");
     // uncomment below lines to exclude current device token
     // if (houseTokens.includes(currentUserToken)) {
     //     houseTokens.splice(houseTokens.indexOf(currentUserToken), 1);
