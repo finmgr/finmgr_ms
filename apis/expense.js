@@ -389,7 +389,7 @@ var expense = {
             gettingUser = await client.db("finmgr").collection("users").findOne(query, options)
             if (gettingUser) {
                 console.log("update user with token" + req.params.id)
-                console.log("update item " + JSON.stringify(req.body))
+                console.log("update token " + req.params.token)
                 var id = req.params.id;
                 const query = { houseid: id };
                 const options = {
@@ -398,12 +398,15 @@ var expense = {
                     // Include only the `title` and `imdb` fields in the returned document
                     projection: { _id: 1, name: 1, amount: 1, date: 1 },
                 };
+                console.log(JSON.stringify(gettingUser));
                 var devicetoken = gettingUser['token'] ? gettingUser['token'] : [];
-                if (devicetoken.includes(req.params.token))
+                if (!devicetoken.includes(req.params.token)){
                     devicetoken.push(req.params.token)
-                const newValue = { $set: { token: devicetoken } };
-
-                databasesList = await client.db("finmgr").collection("users").findOneAndUpdate(query, newValue, options);
+                    const newValue = { $set: { token: devicetoken } };
+    
+                    databasesList = await client.db("finmgr").collection("users").findOneAndUpdate(query, newValue, options);
+                }
+                   
                 res.send(devicetoken);
 
             }
@@ -489,7 +492,7 @@ function sendNotificationToDevice(title, message, headers) {
 }
 function extractDeviceTokens(headers) {
     var currentUserToken = headers.d;
-    var houseTokens = headers.dl;
+    var houseTokens = Array.from(JSON.parse(headers.dl));
     // uncomment below lines to exclude current device token
     // if (houseTokens.includes(currentUserToken)) {
     //     houseTokens.splice(houseTokens.indexOf(currentUserToken), 1);
