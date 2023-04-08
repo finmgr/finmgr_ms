@@ -384,7 +384,7 @@ var expense = {
             const options = {
 
                 // Include only the `title` and `imdb` fields in the returned document
-                projection: { _id: 0, houseid: 1, password: 1 },
+                projection: { _id: 0, houseid: 1, password: 1, token: 1 },
             };
             gettingUser = await client.db("finmgr").collection("users").findOne(query, options)
             if (gettingUser) {
@@ -400,13 +400,14 @@ var expense = {
                 };
                 console.log(JSON.stringify(gettingUser));
                 var devicetoken = gettingUser['token'] ? gettingUser['token'] : [];
+                console.log(devicetoken)
                 if (!devicetoken.includes(req.params.token)){
                     devicetoken.push(req.params.token)
                     const newValue = { $set: { token: devicetoken } };
     
                     databasesList = await client.db("finmgr").collection("users").findOneAndUpdate(query, newValue, options);
                 }
-                   
+                console.log(devicetoken)
                 res.send(devicetoken);
 
             }
